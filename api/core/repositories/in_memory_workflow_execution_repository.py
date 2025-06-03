@@ -7,8 +7,6 @@ from typing import Optional, Union
 
 from core.workflow.entities.workflow_execution import (
     WorkflowExecution,
-    WorkflowExecutionStatus,
-    WorkflowType,
 )
 from core.workflow.repositories.workflow_execution_repository import WorkflowExecutionRepository
 from models import (
@@ -105,7 +103,7 @@ class InMemoryWorkflowExecutionRepository(WorkflowExecutionRepository):
     def _matches_constraints(self, execution: WorkflowExecution) -> bool:
         """
         Check if an execution matches the tenant and app constraints.
-        
+
         In the in-memory implementation, we assume all stored executions
         belong to the current tenant and we don't do explicit tenant filtering.
 
@@ -116,4 +114,4 @@ class InMemoryWorkflowExecutionRepository(WorkflowExecutionRepository):
             True if the execution matches constraints, False otherwise
         """
         # For in-memory implementation, we assume it matches
-        return True 
+        return True

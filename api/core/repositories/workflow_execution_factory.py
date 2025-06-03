@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from configs import DifyConfig
 from core.repositories.in_memory_workflow_execution_repository import InMemoryWorkflowExecutionRepository
 from core.repositories.sqlalchemy_workflow_execution_repository import SQLAlchemyWorkflowExecutionRepository
+from core.repositories.workflow_execution_repo_mode import WorkflowExecRepoMode
 from core.workflow.repositories.workflow_execution_repository import WorkflowExecutionRepository
 from models import Account, EndUser
 from models.enums import WorkflowRunTriggeredFrom
@@ -37,9 +38,9 @@ def create_workflow_execution_repository(
         A WorkflowExecutionRepository implementation
     """
     config = DifyConfig()
-    repo_mode = config.WORKFLOW_EXECUTION_REPO_MODE.lower() if hasattr(config, "WORKFLOW_EXECUTION_REPO_MODE") else "db"
+    repo_mode = config.WORKFLOW_NODE_EXECUTION_REPO_MODE.lower()
 
-    if repo_mode == "memory":
+    if repo_mode == WorkflowExecRepoMode.MEMORY:
         logger.info("Using in-memory workflow execution repository")
         return InMemoryWorkflowExecutionRepository(
             user=user,
@@ -53,4 +54,4 @@ def create_workflow_execution_repository(
             user=user,
             app_id=app_id,
             triggered_from=triggered_from,
-        ) 
+        )

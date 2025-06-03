@@ -158,7 +158,7 @@ class WorkflowAppGenerator(BaseAppGenerator):
             session_factory=session_factory,
             user=user,
             app_id=application_generate_entity.app_config.app_id,
-            triggered_from=workflow_triggered_from,
+            triggered_from=WorkflowNodeExecutionTriggeredFrom.WORKFLOW_RUN,
         )
 
         return self._generate(

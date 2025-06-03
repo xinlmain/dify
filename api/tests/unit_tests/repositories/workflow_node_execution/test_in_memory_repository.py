@@ -8,12 +8,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from core.repositories.in_memory_workflow_node_execution_repository import InMemoryWorkflowNodeExecutionRepository
 from core.workflow.entities.workflow_node_execution import (
     WorkflowNodeExecution,
     WorkflowNodeExecutionMetadataKey,
     WorkflowNodeExecutionStatus,
 )
-from core.repositories.in_memory_workflow_node_execution_repository import InMemoryWorkflowNodeExecutionRepository
 from core.workflow.nodes.enums import NodeType
 from core.workflow.repositories.workflow_node_execution_repository import OrderConfig
 from models import Account, CreatorUserRole, EndUser, Tenant, WorkflowNodeExecutionTriggeredFrom
@@ -85,7 +85,10 @@ def sample_node_execution():
         status=WorkflowNodeExecutionStatus.RUNNING,
         error=None,
         elapsed_time=1.5,
-        metadata={WorkflowNodeExecutionMetadataKey.TOTAL_TOKENS: 100, WorkflowNodeExecutionMetadataKey.TOTAL_PRICE: Decimal("0.0")},
+        metadata={
+            WorkflowNodeExecutionMetadataKey.TOTAL_TOKENS: 100,
+            WorkflowNodeExecutionMetadataKey.TOTAL_PRICE: Decimal("0.0"),
+        },
         created_at=datetime.now(),
         finished_at=None,
     )

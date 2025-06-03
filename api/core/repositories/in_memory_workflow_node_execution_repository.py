@@ -8,7 +8,6 @@ from typing import Optional, Union
 
 from core.workflow.entities.workflow_node_execution import (
     WorkflowNodeExecution,
-    WorkflowNodeExecutionMetadataKey,
     WorkflowNodeExecutionStatus,
 )
 from core.workflow.repositories.workflow_node_execution_repository import OrderConfig, WorkflowNodeExecutionRepository

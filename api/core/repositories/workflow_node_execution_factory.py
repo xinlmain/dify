@@ -13,10 +13,8 @@ from core.repositories import (
     InMemoryWorkflowNodeExecutionRepository,
     SQLAlchemyWorkflowNodeExecutionRepository,
 )
-from core.workflow.repository.workflow_node_execution_repository import (
-    ExecRepoMode,
-    WorkflowNodeExecutionRepository,
-)
+from core.repositories.workflow_execution_repo_mode import WorkflowExecRepoMode
+from core.workflow.repositories.workflow_node_execution_repository import WorkflowNodeExecutionRepository
 from models import Account, EndUser, WorkflowNodeExecutionTriggeredFrom
 
 logger = logging.getLogger(__name__)
@@ -43,7 +41,7 @@ def create_workflow_node_execution_repository(
     config = DifyConfig()
     repo_mode = config.WORKFLOW_NODE_EXECUTION_REPO_MODE.lower()
 
-    if repo_mode == ExecRepoMode.MEMORY:
+    if repo_mode == WorkflowExecRepoMode.MEMORY:
         logger.info("Using in-memory workflow node execution repository")
         return InMemoryWorkflowNodeExecutionRepository(
             user=user,
