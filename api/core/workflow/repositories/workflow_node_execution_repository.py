@@ -10,6 +10,7 @@ class ExecRepoMode(str, Enum):
     """
     Enum for NodeExecution repository storage mode.
     """
+
     SQL = "sql"
     MEMORY = "memory"
 

@@ -4,7 +4,7 @@ In-memory implementation of the WorkflowNodeExecutionRepository.
 
 import logging
 from collections.abc import Sequence
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 from core.workflow.entities.node_execution_entities import (
     NodeExecution,
@@ -29,7 +29,7 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
     making it useful for testing, development, or situations where persistence
     is not required or where performance is critical.
 
-    Like the SQLAlchemy implementation, it supports multi-tenancy by filtering 
+    Like the SQLAlchemy implementation, it supports multi-tenancy by filtering
     operations based on tenant_id.
     """
 
@@ -65,17 +65,17 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
 
         # In-memory storage using dictionaries
         # Primary data store: node_execution_id -> NodeExecution
-        self._executions: Dict[str, NodeExecution] = {}
-        
+        self._executions: dict[str, NodeExecution] = {}
+
         # Index by workflow_run_id for faster lookups
         # workflow_run_id -> List[node_execution_id]
-        self._workflow_run_index: Dict[str, List[str]] = {}
+        self._workflow_run_index: dict[str, list[str]] = {}
 
     def save(self, execution: NodeExecution) -> None:
         """
         Save or update a NodeExecution domain entity to the in-memory store.
 
-        This method will add the execution to the main dictionary and update the 
+        This method will add the execution to the main dictionary and update the
         workflow run index.
 
         Args:
@@ -84,15 +84,15 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
         # Save to primary data store
         if execution.node_execution_id:
             self._executions[execution.node_execution_id] = execution
-            
+
             # Update workflow run index
             if execution.workflow_run_id:
                 if execution.workflow_run_id not in self._workflow_run_index:
                     self._workflow_run_index[execution.workflow_run_id] = []
-                
+
                 if execution.node_execution_id not in self._workflow_run_index[execution.workflow_run_id]:
                     self._workflow_run_index[execution.workflow_run_id].append(execution.node_execution_id)
-            
+
             logger.debug(f"Saved node execution with ID: {execution.node_execution_id}")
         else:
             logger.warning("Attempted to save execution without node_execution_id")
@@ -108,20 +108,20 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
             The NodeExecution instance if found, None otherwise
         """
         execution = self._executions.get(node_execution_id)
-        
+
         # Only return executions that match the tenant_id and app_id constraints
         if execution and self._matches_constraints(execution):
             return execution
-            
+
         return None
-    
+
     def _matches_constraints(self, execution: NodeExecution) -> bool:
         """
         Check if an execution matches the tenant and app constraints.
-        
+
         Args:
             execution: The NodeExecution to check
-            
+
         Returns:
             True if the execution matches constraints, False otherwise
         """
@@ -148,10 +148,10 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
             A list of NodeExecution instances
         """
         result = []
-        
+
         # Get all node_execution_ids for this workflow run
         node_execution_ids = self._workflow_run_index.get(workflow_run_id, [])
-        
+
         # Retrieve the actual executions
         for node_id in node_execution_ids:
             execution = self._executions.get(node_id)
@@ -159,18 +159,16 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
                 # Only include executions from workflow runs, not single steps
                 if execution.workflow_run_id == workflow_run_id:
                     result.append(execution)
-        
+
         # Apply ordering if provided
         if order_config and order_config.order_by:
             is_desc = order_config.order_direction == "desc"
-            
+
             # Apply multi-level sorting
             for sort_field in reversed(order_config.order_by):
-                result.sort(
-                    key=lambda x: getattr(x, sort_field, None),
-                    reverse=is_desc
-                )
-                
+                # Use a key function that ensures a comparable value even if the attribute doesn't exist
+                result.sort(key=lambda x: getattr(x, sort_field, "") or "", reverse=is_desc)
+
         return result
 
     def get_running_executions(self, workflow_run_id: str) -> Sequence[NodeExecution]:
@@ -185,24 +183,21 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
         """
         # Get all executions for this workflow run
         all_executions = self.get_by_workflow_run(workflow_run_id)
-        
+
         # Filter for running status
-        return [
-            execution for execution in all_executions 
-            if execution.status == NodeExecutionStatus.RUNNING
-        ]
+        return [execution for execution in all_executions if execution.status == NodeExecutionStatus.RUNNING]
 
     def clear(self) -> None:
         """
         Clear all NodeExecution records for the current tenant_id and app_id.
-        
+
         This implementation clears the entire in-memory store.
         """
         count = len(self._executions)
         self._executions.clear()
         self._workflow_run_index.clear()
-        
+
         logger.info(
             f"Cleared {count} workflow node execution records for tenant {self._tenant_id}"
             + (f" and app {self._app_id}" if self._app_id else "")
-        ) 
+        )

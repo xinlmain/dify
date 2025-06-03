@@ -9,6 +9,6 @@ from core.repositories.in_memory_workflow_node_execution_repository import InMem
 from core.repositories.sqlalchemy_workflow_node_execution_repository import SQLAlchemyWorkflowNodeExecutionRepository
 
 __all__ = [
-    "SQLAlchemyWorkflowNodeExecutionRepository",
     "InMemoryWorkflowNodeExecutionRepository",
+    "SQLAlchemyWorkflowNodeExecutionRepository",
 ]

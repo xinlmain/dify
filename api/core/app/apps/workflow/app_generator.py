@@ -23,6 +23,7 @@ from core.app.entities.app_invoke_entities import InvokeFrom, WorkflowAppGenerat
 from core.app.entities.task_entities import WorkflowAppBlockingResponse, WorkflowAppStreamResponse
 from core.model_runtime.errors.invoke import InvokeAuthorizationError
 from core.ops.ops_trace_manager import TraceQueueManager
+from core.repositories.workflow_node_execution_factory import create_workflow_node_execution_repository
 from core.repositories.sqlalchemy_workflow_execution_repository import SQLAlchemyWorkflowExecutionRepository
 from core.workflow.repositories.workflow_execution_repository import WorkflowExecutionRepository
 from core.workflow.repositories.workflow_node_execution_repository import WorkflowNodeExecutionRepository
@@ -30,7 +31,6 @@ from extensions.ext_database import db
 from factories import file_factory
 from models import Account, App, EndUser, Workflow, WorkflowNodeExecutionTriggeredFrom
 from models.enums import WorkflowRunTriggeredFrom
-from core.repositories.workflow_node_execution_factory import create_workflow_node_execution_repository
 
 logger = logging.getLogger(__name__)
 

@@ -528,7 +528,7 @@ class WorkflowNodeExecutionConfig(BaseSettings):
         default="rdbms",
         description="Storage backend for WorkflowNodeExecution. Options: 'rdbms', 'hybrid'",
     )
-    
+
     WORKFLOW_NODE_EXECUTION_REPO_MODE: str = Field(
         default="sql",
         description="Repository mode for WorkflowNodeExecution. Options: 'sql', 'memory'",
