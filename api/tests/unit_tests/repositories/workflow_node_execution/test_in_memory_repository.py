@@ -8,11 +8,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from core.workflow.entities.workflow_node_execution import (
+    WorkflowNodeExecution,
+    WorkflowNodeExecutionMetadataKey,
+    WorkflowNodeExecutionStatus,
+)
 from core.repositories.in_memory_workflow_node_execution_repository import InMemoryWorkflowNodeExecutionRepository
-from core.workflow.entities.node_entities import NodeRunMetadataKey
-from core.workflow.entities.node_execution_entities import NodeExecution, NodeExecutionStatus
 from core.workflow.nodes.enums import NodeType
-from core.workflow.repository.workflow_node_execution_repository import OrderConfig
+from core.workflow.repositories.workflow_node_execution_repository import OrderConfig
 from models import Account, CreatorUserRole, EndUser, Tenant, WorkflowNodeExecutionTriggeredFrom
 
 
@@ -65,12 +68,12 @@ def end_user_repository(mock_end_user):
 
 @pytest.fixture
 def sample_node_execution():
-    """Create a sample NodeExecution for testing."""
-    return NodeExecution(
+    """Create a sample WorkflowNodeExecution for testing."""
+    return WorkflowNodeExecution(
         id="test-id",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id",
-        workflow_run_id="test-workflow-run-id",
+        workflow_execution_id="test-workflow-run-id",
         index=1,
         predecessor_node_id="test-predecessor-id",
         node_id="test-node-id",
@@ -79,10 +82,10 @@ def sample_node_execution():
         inputs={"input_key": "input_value"},
         process_data={"process_key": "process_value"},
         outputs={"output_key": "output_value"},
-        status=NodeExecutionStatus.RUNNING,
+        status=WorkflowNodeExecutionStatus.RUNNING,
         error=None,
         elapsed_time=1.5,
-        metadata={NodeRunMetadataKey.TOTAL_TOKENS: 100, NodeRunMetadataKey.TOTAL_PRICE: Decimal("0.0")},
+        metadata={WorkflowNodeExecutionMetadataKey.TOTAL_TOKENS: 100, WorkflowNodeExecutionMetadataKey.TOTAL_PRICE: Decimal("0.0")},
         created_at=datetime.now(),
         finished_at=None,
     )
@@ -146,11 +149,11 @@ def test_save(account_repository, sample_node_execution):
     assert account_repository._executions[sample_node_execution.node_execution_id] is sample_node_execution
 
     # Verify workflow run index was updated
-    assert sample_node_execution.workflow_run_id is not None
-    assert sample_node_execution.workflow_run_id in account_repository._workflow_run_index
+    assert sample_node_execution.workflow_execution_id is not None
+    assert sample_node_execution.workflow_execution_id in account_repository._workflow_run_index
     assert (
         sample_node_execution.node_execution_id
-        in account_repository._workflow_run_index[sample_node_execution.workflow_run_id]
+        in account_repository._workflow_run_index[sample_node_execution.workflow_execution_id]
     )
 
 
@@ -180,11 +183,11 @@ def test_get_by_workflow_run(account_repository, sample_node_execution):
     account_repository.save(sample_node_execution)
 
     # Create and save another execution in the same workflow run
-    another_execution = NodeExecution(
+    another_execution = WorkflowNodeExecution(
         id="test-id-2",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-2",
-        workflow_run_id=sample_node_execution.workflow_run_id,
+        workflow_execution_id=sample_node_execution.workflow_execution_id,
         index=2,
         predecessor_node_id=sample_node_execution.node_id,
         node_id="test-node-id-2",
@@ -193,7 +196,7 @@ def test_get_by_workflow_run(account_repository, sample_node_execution):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.RUNNING,
+        status=WorkflowNodeExecutionStatus.RUNNING,
         error=None,
         elapsed_time=0.0,
         metadata={},  # Empty dict for metadata
@@ -203,7 +206,7 @@ def test_get_by_workflow_run(account_repository, sample_node_execution):
     account_repository.save(another_execution)
 
     # Retrieve the executions
-    executions = account_repository.get_by_workflow_run(sample_node_execution.workflow_run_id)
+    executions = account_repository.get_by_workflow_run(sample_node_execution.workflow_execution_id)
 
     # Verify we got both executions
     assert len(executions) == 2
@@ -214,14 +217,14 @@ def test_get_by_workflow_run(account_repository, sample_node_execution):
 def test_get_by_workflow_run_with_ordering(account_repository):
     """Test get_by_workflow_run method with ordering."""
     # Create and save executions with different creation times and indices
-    workflow_run_id = "test-workflow-run-id"
+    workflow_execution_id = "test-workflow-run-id"
 
     # Create executions with different values to test sorting
-    execution1 = NodeExecution(
+    execution1 = WorkflowNodeExecution(
         id="test-id-1",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-1",
-        workflow_run_id=workflow_run_id,
+        workflow_execution_id=workflow_execution_id,
         index=1,
         node_id="test-node-id-1",
         node_type=NodeType.START,
@@ -229,7 +232,7 @@ def test_get_by_workflow_run_with_ordering(account_repository):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.SUCCEEDED,
+        status=WorkflowNodeExecutionStatus.SUCCEEDED,
         error=None,
         elapsed_time=1.0,
         metadata={},  # Empty dict for metadata
@@ -237,11 +240,11 @@ def test_get_by_workflow_run_with_ordering(account_repository):
         finished_at=datetime(2023, 1, 1, 10, 0, 30),
     )
 
-    execution2 = NodeExecution(
+    execution2 = WorkflowNodeExecution(
         id="test-id-2",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-2",
-        workflow_run_id=workflow_run_id,
+        workflow_execution_id=workflow_execution_id,
         index=2,
         node_id="test-node-id-2",
         node_type=NodeType.LLM,
@@ -249,7 +252,7 @@ def test_get_by_workflow_run_with_ordering(account_repository):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.SUCCEEDED,
+        status=WorkflowNodeExecutionStatus.SUCCEEDED,
         error=None,
         elapsed_time=2.0,
         metadata={},  # Empty dict for metadata
@@ -257,11 +260,11 @@ def test_get_by_workflow_run_with_ordering(account_repository):
         finished_at=datetime(2023, 1, 1, 9, 0, 30),
     )
 
-    execution3 = NodeExecution(
+    execution3 = WorkflowNodeExecution(
         id="test-id-3",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-3",
-        workflow_run_id=workflow_run_id,
+        workflow_execution_id=workflow_execution_id,
         index=3,
         node_id="test-node-id-3",
         node_type=NodeType.KNOWLEDGE_RETRIEVAL,
@@ -269,7 +272,7 @@ def test_get_by_workflow_run_with_ordering(account_repository):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.SUCCEEDED,
+        status=WorkflowNodeExecutionStatus.SUCCEEDED,
         error=None,
         elapsed_time=3.0,
         metadata={},  # Empty dict for metadata
@@ -284,7 +287,7 @@ def test_get_by_workflow_run_with_ordering(account_repository):
 
     # Test ordering by index ascending
     order_config = OrderConfig(order_by=["index"], order_direction="asc")
-    executions = account_repository.get_by_workflow_run(workflow_run_id, order_config)
+    executions = account_repository.get_by_workflow_run(workflow_execution_id, order_config)
 
     # Verify order
     assert len(executions) == 3
@@ -294,7 +297,7 @@ def test_get_by_workflow_run_with_ordering(account_repository):
 
     # Test ordering by index descending
     order_config = OrderConfig(order_by=["index"], order_direction="desc")
-    executions = account_repository.get_by_workflow_run(workflow_run_id, order_config)
+    executions = account_repository.get_by_workflow_run(workflow_execution_id, order_config)
 
     # Verify order
     assert len(executions) == 3
@@ -304,7 +307,7 @@ def test_get_by_workflow_run_with_ordering(account_repository):
 
     # Test ordering by created_at
     order_config = OrderConfig(order_by=["created_at"], order_direction="asc")
-    executions = account_repository.get_by_workflow_run(workflow_run_id, order_config)
+    executions = account_repository.get_by_workflow_run(workflow_execution_id, order_config)
 
     # Verify order
     assert len(executions) == 3
@@ -314,7 +317,7 @@ def test_get_by_workflow_run_with_ordering(account_repository):
 
     # Test multi-field ordering
     order_config = OrderConfig(order_by=["node_type", "index"], order_direction="asc")
-    executions = account_repository.get_by_workflow_run(workflow_run_id, order_config)
+    executions = account_repository.get_by_workflow_run(workflow_execution_id, order_config)
 
     # Verify order - should be sorted by node_type first, then by index
     assert len(executions) == 3
@@ -330,7 +333,7 @@ def test_get_by_workflow_run_with_non_existent_attribute(account_repository, sam
 
     # Try to order by a non-existent attribute
     order_config = OrderConfig(order_by=["non_existent_field"], order_direction="asc")
-    executions = account_repository.get_by_workflow_run(sample_node_execution.workflow_run_id, order_config)
+    executions = account_repository.get_by_workflow_run(sample_node_execution.workflow_execution_id, order_config)
 
     # Should still return results without error
     assert len(executions) == 1
@@ -339,14 +342,14 @@ def test_get_by_workflow_run_with_non_existent_attribute(account_repository, sam
 
 def test_get_by_workflow_run_with_none_attribute_values(account_repository):
     """Test get_by_workflow_run with ordering by attributes that might be None."""
-    workflow_run_id = "test-workflow-run-id"
+    workflow_execution_id = "test-workflow-run-id"
 
     # Create executions with some None values
-    execution1 = NodeExecution(
+    execution1 = WorkflowNodeExecution(
         id="test-id-1",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-1",
-        workflow_run_id=workflow_run_id,
+        workflow_execution_id=workflow_execution_id,
         index=1,
         node_id="test-node-id-1",
         predecessor_node_id=None,  # This is None
@@ -355,7 +358,7 @@ def test_get_by_workflow_run_with_none_attribute_values(account_repository):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.SUCCEEDED,
+        status=WorkflowNodeExecutionStatus.SUCCEEDED,
         error=None,
         elapsed_time=1.0,
         metadata={},  # Empty dict for metadata
@@ -363,11 +366,11 @@ def test_get_by_workflow_run_with_none_attribute_values(account_repository):
         finished_at=None,
     )
 
-    execution2 = NodeExecution(
+    execution2 = WorkflowNodeExecution(
         id="test-id-2",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-2",
-        workflow_run_id=workflow_run_id,
+        workflow_execution_id=workflow_execution_id,
         index=2,
         node_id="test-node-id-2",
         predecessor_node_id="test-node-id-1",  # This has a value
@@ -376,7 +379,7 @@ def test_get_by_workflow_run_with_none_attribute_values(account_repository):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.SUCCEEDED,
+        status=WorkflowNodeExecutionStatus.SUCCEEDED,
         error=None,
         elapsed_time=2.0,
         metadata={},  # Empty dict for metadata
@@ -390,7 +393,7 @@ def test_get_by_workflow_run_with_none_attribute_values(account_repository):
 
     # Order by the field that has None values
     order_config = OrderConfig(order_by=["predecessor_node_id"], order_direction="asc")
-    executions = account_repository.get_by_workflow_run(workflow_run_id, order_config)
+    executions = account_repository.get_by_workflow_run(workflow_execution_id, order_config)
 
     # Should return results without error
     assert len(executions) == 2
@@ -398,14 +401,14 @@ def test_get_by_workflow_run_with_none_attribute_values(account_repository):
 
 def test_get_running_executions(account_repository):
     """Test get_running_executions method."""
-    workflow_run_id = "test-workflow-run-id"
+    workflow_execution_id = "test-workflow-run-id"
 
     # Create a running execution
-    running_execution = NodeExecution(
+    running_execution = WorkflowNodeExecution(
         id="test-id-1",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-1",
-        workflow_run_id=workflow_run_id,
+        workflow_execution_id=workflow_execution_id,
         index=1,
         node_id="test-node-id-1",
         node_type=NodeType.START,
@@ -413,7 +416,7 @@ def test_get_running_executions(account_repository):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.RUNNING,
+        status=WorkflowNodeExecutionStatus.RUNNING,
         error=None,
         elapsed_time=1.0,
         metadata={},  # Empty dict for metadata
@@ -422,11 +425,11 @@ def test_get_running_executions(account_repository):
     )
 
     # Create a completed execution
-    completed_execution = NodeExecution(
+    completed_execution = WorkflowNodeExecution(
         id="test-id-2",
         workflow_id="test-workflow-id",
         node_execution_id="test-node-execution-id-2",
-        workflow_run_id=workflow_run_id,
+        workflow_execution_id=workflow_execution_id,
         index=2,
         node_id="test-node-id-2",
         node_type=NodeType.LLM,
@@ -434,7 +437,7 @@ def test_get_running_executions(account_repository):
         inputs={},  # Empty dict for inputs
         process_data={},  # Empty dict for process_data
         outputs={},  # Empty dict for outputs
-        status=NodeExecutionStatus.SUCCEEDED,
+        status=WorkflowNodeExecutionStatus.SUCCEEDED,
         error=None,
         elapsed_time=2.0,
         metadata={},  # Empty dict for metadata
@@ -447,7 +450,7 @@ def test_get_running_executions(account_repository):
     account_repository.save(completed_execution)
 
     # Get running executions
-    running_executions = account_repository.get_running_executions(workflow_run_id)
+    running_executions = account_repository.get_running_executions(workflow_execution_id)
 
     # Verify only the running execution is returned
     assert len(running_executions) == 1

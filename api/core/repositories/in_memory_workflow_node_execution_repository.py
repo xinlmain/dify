@@ -6,11 +6,12 @@ import logging
 from collections.abc import Sequence
 from typing import Optional, Union
 
-from core.workflow.entities.node_execution_entities import (
-    NodeExecution,
-    NodeExecutionStatus,
+from core.workflow.entities.workflow_node_execution import (
+    WorkflowNodeExecution,
+    WorkflowNodeExecutionMetadataKey,
+    WorkflowNodeExecutionStatus,
 )
-from core.workflow.repository.workflow_node_execution_repository import OrderConfig, WorkflowNodeExecutionRepository
+from core.workflow.repositories.workflow_node_execution_repository import OrderConfig, WorkflowNodeExecutionRepository
 from models import (
     Account,
     CreatorUserRole,
@@ -65,13 +66,13 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
 
         # In-memory storage using dictionaries
         # Primary data store: node_execution_id -> NodeExecution
-        self._executions: dict[str, NodeExecution] = {}
+        self._executions: dict[str, WorkflowNodeExecution] = {}
 
-        # Index by workflow_run_id for faster lookups
-        # workflow_run_id -> List[node_execution_id]
+        # Index by workflow_execution_id for faster lookups
+        # workflow_execution_id -> List[node_execution_id]
         self._workflow_run_index: dict[str, list[str]] = {}
 
-    def save(self, execution: NodeExecution) -> None:
+    def save(self, execution: WorkflowNodeExecution) -> None:
         """
         Save or update a NodeExecution domain entity to the in-memory store.
 
@@ -86,18 +87,18 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
             self._executions[execution.node_execution_id] = execution
 
             # Update workflow run index
-            if execution.workflow_run_id:
-                if execution.workflow_run_id not in self._workflow_run_index:
-                    self._workflow_run_index[execution.workflow_run_id] = []
+            if execution.workflow_execution_id:
+                if execution.workflow_execution_id not in self._workflow_run_index:
+                    self._workflow_run_index[execution.workflow_execution_id] = []
 
-                if execution.node_execution_id not in self._workflow_run_index[execution.workflow_run_id]:
-                    self._workflow_run_index[execution.workflow_run_id].append(execution.node_execution_id)
+                if execution.node_execution_id not in self._workflow_run_index[execution.workflow_execution_id]:
+                    self._workflow_run_index[execution.workflow_execution_id].append(execution.node_execution_id)
 
             logger.debug(f"Saved node execution with ID: {execution.node_execution_id}")
         else:
             logger.warning("Attempted to save execution without node_execution_id")
 
-    def get_by_node_execution_id(self, node_execution_id: str) -> Optional[NodeExecution]:
+    def get_by_node_execution_id(self, node_execution_id: str) -> Optional[WorkflowNodeExecution]:
         """
         Retrieve a NodeExecution by its node_execution_id.
 
@@ -115,7 +116,7 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
 
         return None
 
-    def _matches_constraints(self, execution: NodeExecution) -> bool:
+    def _matches_constraints(self, execution: WorkflowNodeExecution) -> bool:
         """
         Check if an execution matches the tenant and app constraints.
 
@@ -132,14 +133,14 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
 
     def get_by_workflow_run(
         self,
-        workflow_run_id: str,
+        workflow_execution_id: str,
         order_config: Optional[OrderConfig] = None,
-    ) -> Sequence[NodeExecution]:
+    ) -> Sequence[WorkflowNodeExecution]:
         """
         Retrieve all NodeExecution instances for a specific workflow run.
 
         Args:
-            workflow_run_id: The workflow run ID
+            workflow_execution_id: The workflow run ID
             order_config: Optional configuration for ordering results
                 order_config.order_by: List of fields to order by (e.g., ["index", "created_at"])
                 order_config.order_direction: Direction to order ("asc" or "desc")
@@ -150,14 +151,14 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
         result = []
 
         # Get all node_execution_ids for this workflow run
-        node_execution_ids = self._workflow_run_index.get(workflow_run_id, [])
+        node_execution_ids = self._workflow_run_index.get(workflow_execution_id, [])
 
         # Retrieve the actual executions
         for node_id in node_execution_ids:
             execution = self._executions.get(node_id)
             if execution and self._matches_constraints(execution):
                 # Only include executions from workflow runs, not single steps
-                if execution.workflow_run_id == workflow_run_id:
+                if execution.workflow_execution_id == workflow_execution_id:
                     result.append(execution)
 
         # Apply ordering if provided
@@ -171,21 +172,21 @@ class InMemoryWorkflowNodeExecutionRepository(WorkflowNodeExecutionRepository):
 
         return result
 
-    def get_running_executions(self, workflow_run_id: str) -> Sequence[NodeExecution]:
+    def get_running_executions(self, workflow_execution_id: str) -> Sequence[WorkflowNodeExecution]:
         """
         Retrieve all running NodeExecution instances for a specific workflow run.
 
         Args:
-            workflow_run_id: The workflow run ID
+            workflow_execution_id: The workflow run ID
 
         Returns:
             A list of running NodeExecution instances
         """
         # Get all executions for this workflow run
-        all_executions = self.get_by_workflow_run(workflow_run_id)
+        all_executions = self.get_by_workflow_run(workflow_execution_id)
 
         # Filter for running status
-        return [execution for execution in all_executions if execution.status == NodeExecutionStatus.RUNNING]
+        return [execution for execution in all_executions if execution.status == WorkflowNodeExecutionStatus.RUNNING]
 
     def clear(self) -> None:
         """
